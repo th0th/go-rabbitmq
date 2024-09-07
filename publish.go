@@ -9,7 +9,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func (r *service) Publish(exchange string, key string, mandatory bool, immediate bool, msg amqp.Publishing) error {
+func (r *service) Publish(exchange string, key string, mandatory bool, immediate bool, msg Publishing) error {
 	return r.getPublishChannel().PublishWithContext(context.Background(), exchange, key, mandatory, immediate, msg)
 }
 

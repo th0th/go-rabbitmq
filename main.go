@@ -18,10 +18,12 @@ type Queue struct {
 	Ttl  time.Duration
 }
 
+type Publishing = amqp.Publishing
+
 type Service interface {
 	Consume(queues []string, deliveryChannel chan<- amqp.Delivery) error
 	DeclareQueues(queues []Queue) error
-	Publish(exchange string, key string, mandatory bool, immediate bool, msg amqp.Publishing) error
+	Publish(exchange string, key string, mandatory bool, immediate bool, msg Publishing) error
 }
 
 type service struct {
