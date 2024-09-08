@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sync"
@@ -23,7 +24,7 @@ type Publishing = amqp.Publishing
 type Service interface {
 	Consume(queues []string, deliveryChannel chan<- amqp.Delivery) error
 	DeclareQueues(queues []Queue) error
-	Publish(exchange string, key string, mandatory bool, immediate bool, msg Publishing) error
+	Publish(ctx context.Context, queue string, msg Publishing) error
 }
 
 type service struct {
