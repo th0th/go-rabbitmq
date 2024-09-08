@@ -14,12 +14,13 @@ import (
 
 const deadLetterQueueTtl = 604800000
 
+type Delivery = amqp.Delivery
+type Publishing = amqp.Publishing
+
 type Queue struct {
 	Name string
 	Ttl  time.Duration
 }
-
-type Publishing = amqp.Publishing
 
 type Service interface {
 	Consume(queues []string, deliveryChannel chan<- amqp.Delivery) error
