@@ -26,6 +26,7 @@ type Service interface {
 	Consume(queues []string, deliveryChannel chan<- amqp.Delivery) error
 	DeclareQueues(queues []Queue) error
 	Publish(ctx context.Context, queue string, msg Publishing) error
+	SetConsumePrefetchCount(count int)
 }
 
 type service struct {
@@ -40,8 +41,8 @@ type service struct {
 	url                  string
 }
 
-func New(consumePrefetchCount int, url string) (Service, error) {
-	r := service{consumePrefetchCount: consumePrefetchCount, url: url}
+func New(url string) (Service, error) {
+	r := service{url: url}
 
 	err := r.openConnection()
 	if err != nil {
@@ -51,8 +52,8 @@ func New(consumePrefetchCount int, url string) (Service, error) {
 	return &r, nil
 }
 
-func (r *service) DeclareQueues(queues []Queue) error {
-	channel, err := r.getConnection().Channel()
+func (s *service) DeclareQueues(queues []Queue) error {
+	channel, err := s.getConnection().Channel()
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
@@ -91,6 +92,10 @@ func (r *service) DeclareQueues(queues []Queue) error {
 	}
 
 	return nil
+}
+
+func (s *service) SetConsumePrefetchCount(count int) {
+	s.consumePrefetchCount = count
 }
 
 func (q *Queue) GetDeadLetterQueueName() string {

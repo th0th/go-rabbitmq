@@ -8,16 +8,16 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func (r *service) Consume(queues []string, deliveryChannel chan<- amqp.Delivery) error {
-	if r.consumeChannelMap == nil {
-		r.consumeChannelMap = map[string]chan<- amqp.Delivery{}
+func (s *service) Consume(queues []string, deliveryChannel chan<- amqp.Delivery) error {
+	if s.consumeChannelMap == nil {
+		s.consumeChannelMap = map[string]chan<- amqp.Delivery{}
 	}
 
 	for _, queue := range queues {
-		r.consumeChannelMap[queue] = deliveryChannel
+		s.consumeChannelMap[queue] = deliveryChannel
 	}
 
-	err := r.startConsuming()
+	err := s.startConsuming()
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
@@ -25,11 +25,11 @@ func (r *service) Consume(queues []string, deliveryChannel chan<- amqp.Delivery)
 	return nil
 }
 
-func (r *service) startConsuming() error {
+func (s *service) startConsuming() error {
 	errs := []error{}
 
-	for queue, c := range r.consumeChannelMap {
-		deliveryChannel, err := r.getConsumeChannel().Consume(queue, "", false, false, false, false, nil)
+	for queue, c := range s.consumeChannelMap {
+		deliveryChannel, err := s.getConsumeChannel().Consume(queue, "", false, false, false, false, nil)
 		if err != nil {
 			errs = append(errs, errors.Wrap(err, 0))
 		} else {
@@ -49,25 +49,25 @@ func (r *service) startConsuming() error {
 	return nil
 }
 
-func (r *service) getConsumeChannel() *amqp.Channel {
-	r.consumeChannelLock.Lock()
-	defer r.consumeChannelLock.Unlock()
+func (s *service) getConsumeChannel() *amqp.Channel {
+	s.consumeChannelLock.Lock()
+	defer s.consumeChannelLock.Unlock()
 
-	if r.consumeChannel == nil {
-		err := r.openConsumeChannel()
+	if s.consumeChannel == nil {
+		err := s.openConsumeChannel()
 		if err != nil {
 			panic(errors.Wrap(err, 0))
 		}
 	}
 
-	return r.consumeChannel
+	return s.consumeChannel
 }
 
-func (r *service) handleClosedConsumeChannel() error {
-	r.getConnection()
+func (s *service) handleClosedConsumeChannel() error {
+	s.getConnection()
 
-	r.consumeChannelLock.Lock()
-	defer r.consumeChannelLock.Unlock()
+	s.consumeChannelLock.Lock()
+	defer s.consumeChannelLock.Unlock()
 
 	var err error
 
@@ -82,7 +82,7 @@ func (r *service) handleClosedConsumeChannel() error {
 		Logger.Warn().Msg(msg)
 		time.Sleep(time.Duration(secondsToWait) * time.Second)
 
-		err2 := r.openConsumeChannel()
+		err2 := s.openConsumeChannel()
 		if err2 != nil {
 			err = errors.Wrap(err2, 0)
 		} else {
@@ -99,27 +99,27 @@ func (r *service) handleClosedConsumeChannel() error {
 	return nil
 }
 
-func (r *service) openConsumeChannel() error {
-	ch, err := r.getConnection().Channel()
+func (s *service) openConsumeChannel() error {
+	ch, err := s.getConnection().Channel()
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
 
-	r.consumeChannel = ch
+	s.consumeChannel = ch
 
-	err = r.consumeChannel.Qos(r.consumePrefetchCount, 0, false)
+	err = s.consumeChannel.Qos(s.consumePrefetchCount, 0, false)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
 
 	go func() {
-		if <-r.consumeChannel.NotifyClose(make(chan *amqp.Error)) != nil {
-			err2 := r.handleClosedConsumeChannel()
+		if <-s.consumeChannel.NotifyClose(make(chan *amqp.Error)) != nil {
+			err2 := s.handleClosedConsumeChannel()
 			if err2 != nil {
 				panic(err2)
 			}
 
-			err2 = r.startConsuming()
+			err2 = s.startConsuming()
 			if err2 != nil {
 				panic(err2)
 			}

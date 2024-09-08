@@ -8,23 +8,23 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func (r *service) getConnection() *amqp.Connection {
-	r.connectionLock.Lock()
-	defer r.connectionLock.Unlock()
+func (s *service) getConnection() *amqp.Connection {
+	s.connectionLock.Lock()
+	defer s.connectionLock.Unlock()
 
-	if r.connection == nil {
-		err := r.openConnection()
+	if s.connection == nil {
+		err := s.openConnection()
 		if err != nil {
 			panic(errors.Wrap(err, 0))
 		}
 	}
 
-	return r.connection
+	return s.connection
 }
 
-func (r *service) handleClosedConnection() error {
-	r.connectionLock.Lock()
-	defer r.connectionLock.Unlock()
+func (s *service) handleClosedConnection() error {
+	s.connectionLock.Lock()
+	defer s.connectionLock.Unlock()
 
 	var err error
 
@@ -39,7 +39,7 @@ func (r *service) handleClosedConnection() error {
 		Logger.Warn().Msg(msg)
 		time.Sleep(time.Duration(secondsToWait) * time.Second)
 
-		err2 := r.openConnection()
+		err2 := s.openConnection()
 		if err2 != nil {
 			err = errors.Wrap(err2, 0)
 		} else {
@@ -55,17 +55,17 @@ func (r *service) handleClosedConnection() error {
 	return nil
 }
 
-func (r *service) openConnection() error {
-	con, err := amqp.Dial(r.url)
+func (s *service) openConnection() error {
+	con, err := amqp.Dial(s.url)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
 
-	r.connection = con
+	s.connection = con
 
 	go func() {
-		if <-r.connection.NotifyClose(make(chan *amqp.Error)) != nil {
-			err2 := r.handleClosedConnection()
+		if <-s.connection.NotifyClose(make(chan *amqp.Error)) != nil {
+			err2 := s.handleClosedConnection()
 			if err2 != nil {
 				panic(errors.Wrap(err2, 0))
 			}
